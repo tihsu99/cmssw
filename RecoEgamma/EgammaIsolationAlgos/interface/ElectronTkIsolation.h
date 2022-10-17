@@ -11,6 +11,8 @@
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
 #include "RecoEgamma/EgammaIsolationAlgos/interface/EgammaTrackSelector.h"
 
 #include <string>
@@ -18,6 +20,17 @@
 
 class ElectronTkIsolation {
 public:
+
+  enum TRK_DT_TYPE {
+    ABSOLUTE = 0,
+    SIGNIFICANCE
+  };
+  
+  enum TRK_DT_REF {
+    PV = 0,
+    SIG
+  };
+
   //constructors
   ElectronTkIsolation(double extRadius,
                       double intRadius,
@@ -60,6 +73,49 @@ public:
         drb_(drb),
         trackCollection_(trackCollection),
         beamPoint_(beamPoint) {
+    setAlgosToReject();
+    setDzOption("vz");
+  }
+  
+  ElectronTkIsolation(double extRadius,
+                      double intRadiusBarrel,
+                      double intRadiusEndcap,
+                      double stripBarrel,
+                      double stripEndcap,
+                      double ptLow,
+                      double lip,
+                      double drb,
+                      int dtRef,
+                      int dtType,
+                      double dtMax,
+                      double trkMtdMvaMin_,
+                      //const reco::TrackCollection* trackCollection,
+                      const edm::Handle <reco::TrackCollection> &trackCollectionH,
+                      const edm::ValueMap<float> &mtdt0,
+                      const edm::ValueMap<float> &mtdSigmat0,
+                      const edm::ValueMap<float> &mtdTrkQualMVA,
+                      reco::TrackBase::Point beamPoint,
+                      const reco::Vertex &vertex
+                      )
+      : extRadius_(extRadius),
+        intRadiusBarrel_(intRadiusBarrel),
+        intRadiusEndcap_(intRadiusEndcap),
+        stripBarrel_(stripBarrel),
+        stripEndcap_(stripEndcap),
+        ptLow_(ptLow),
+        lip_(lip),
+        drb_(drb),
+        dtRef_(dtRef),
+        dtType_(dtType),
+        dtMax_(dtMax),
+        trkMtdMvaMin_(trkMtdMvaMin_),
+        trackCollection_(trackCollectionH.product()),
+        trackCollectionH_(trackCollectionH),
+        mtdt0_(mtdt0),
+        mtdSigmat0_(mtdSigmat0),
+        mtdTrkQualMVA_(mtdTrkQualMVA),
+        beamPoint_(beamPoint),
+        vertex_(vertex) {
     setAlgosToReject();
     setDzOption("vz");
   }
@@ -110,10 +166,19 @@ private:
   double ptLow_;
   double lip_;
   double drb_;
+  int dtRef_;
+  int dtType_;
+  double dtMax_;
+  double trkMtdMvaMin_;
   std::vector<int> algosToReject_;  //vector is sorted
   const reco::TrackCollection* trackCollection_;
+  const edm::Handle <reco::TrackCollection> trackCollectionH_;
+  const edm::ValueMap<float> mtdt0_;
+  const edm::ValueMap<float> mtdSigmat0_;
+  const edm::ValueMap<float> mtdTrkQualMVA_;
   reco::TrackBase::Point beamPoint_;
-
+  reco::Vertex vertex_;
+  
   int dzOption_;
 };
 

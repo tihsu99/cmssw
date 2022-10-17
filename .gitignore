@@ -5,6 +5,11 @@ __init__.py
 #*#
 *~
 *.pb
+*tmp*
+*logs*
+*.root
+*.bak*
+*/condorJobs/*
 
 # ignore partially applied patches and their backup
 *.rej
