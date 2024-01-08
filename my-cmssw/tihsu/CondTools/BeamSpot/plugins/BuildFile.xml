@@ -1,0 +1,11 @@
+<use name="CondTools/BeamSpot"/>
+<use name="CondCore/PopCon"/>
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="CondFormats/DataRecord"/>
+<use name="CondFormats/BeamSpotObjects"/>
+<use name="CommonTools/UtilAlgos"/>
+<use name="CondCore/CondDB"/>
+<library file="*.cc" name="CondToolsBeamSpotPlugins">
+  <flags EDM_PLUGIN="1"/>
+</library>
