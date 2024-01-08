@@ -1,0 +1,23 @@
+<use name="cppunit"/>
+<use name="boost"/>
+<use name="CondFormats/Common"/>
+<bin file="exTime.cpp" name="exCondTime">
+</bin>
+
+<bin file="hash64_t.cpp">
+</bin>
+
+<bin file="SmallWORMDict_t.cpp">
+</bin>
+
+<use name="root"/>
+
+<bin file="testSerializationCommon.cpp">
+</bin>
+
+<environment>
+  <bin file="testDropboxMetadataDB.cpp">
+    <flags TEST_RUNNER_ARGS=" /bin/bash CondFormats/Common/test createTestDBObjects.sh"/>
+    <use name="FWCore/Utilities"/>
+  </bin>
+</environment>
