@@ -50,6 +50,7 @@ struct kInvmHistos {
   kThreeMomentumHistos electron1;
   kThreeMomentumHistos electron2;
   dqm::reco::MonitorElement* h1InvMass12;
+  dqm::reco::MonitorElement* h1InvMassID;
 };
 
 struct kHistogramsScoutingMonitoring {
@@ -64,7 +65,6 @@ class ScoutingMonitoring
   ~ScoutingMonitoring() override;
 
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-
  private:
   void bookHistograms(DQMStore::IBooker&, edm::Run const&,
                       edm::EventSetup const&,
@@ -72,12 +72,14 @@ class ScoutingMonitoring
 
   void dqmAnalyze(edm::Event const&, edm::EventSetup const&,
                   kHistogramsScoutingMonitoring const&) const override;
+  bool scoutingElectronID(const Run3ScoutingElectron el) const;
 
   // ------------ member data ------------
   std::string outputInternalPath_;
-  edm::EDGetTokenT<std::vector<pat::Electron> > electronCollection_;
+  edm::EDGetTokenT<edm::View<pat::Electron> > electronCollection_;
   edm::EDGetTokenT<std::vector<Run3ScoutingElectron> >
       scoutingElectronCollection_;
+  edm::EDGetTokenT<edm::ValueMap<bool> > eleIdMapTightToken_;
 };
 
 #endif
