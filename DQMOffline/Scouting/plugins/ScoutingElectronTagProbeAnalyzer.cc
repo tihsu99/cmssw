@@ -60,13 +60,15 @@ void ScoutingElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
 
 bool ScoutingElectronTagProbeAnalyzer::scoutingElectronID(const Run3ScoutingElectron el) const{
 
-  bool isEB = (fabs(el.eta()) < 1.5);
+  math::PtEtaPhiMLorentzVector particle(el.pt(), el.eta(), el.phi(), 0.0005);
+  double particle_energy = particle.energy();
+  bool isEB = (fabs(el.eta()) < 1.479);
   if (isEB){
     if(el.sigmaIetaIeta() > 0.015) return false;
     if(el.hOverE() > 0.2) return false;
     if(fabs(el.dEtaIn()) > 0.008) return false;
     if(fabs(el.dPhiIn()) > 0.06)  return false;
-    if(el.ecalIso()/el.pt() > 0.25) return false;
+    if(el.ecalIso()/particle_energy > 0.25) return false;
     return true;
 
   }
@@ -75,7 +77,7 @@ bool ScoutingElectronTagProbeAnalyzer::scoutingElectronID(const Run3ScoutingElec
     if(el.hOverE() > 0.2) return false;
     if(fabs(el.dEtaIn()) > 0.012) return false;
     if(fabs(el.dPhiIn()) > 0.06) return false;
-    if(el.ecalIso()/el.pt() > 0.1) return false;
+    if(el.ecalIso()/particle_energy > 0.1) return false;
     return true;
   }
 }

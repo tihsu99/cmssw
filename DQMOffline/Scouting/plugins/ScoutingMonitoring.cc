@@ -22,6 +22,11 @@
 #include "ScoutingMonitoring.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
+#include "DataFormats/Math/interface/LorentzVector.h"
+#include "DataFormats/Math/interface/deltaPhi.h"
+
+#include <numeric>
+#include <algorithm>
 
 //
 // constants, enums and typedefs
@@ -51,6 +56,13 @@ ScoutingMonitoring::~ScoutingMonitoring() {
 //
 // member functions
 //
+
+// Function to convert pseudo-rapidity to theta
+double getPtFromEnergyMassEta(double energy, double mass, double eta) {
+    double theta = 2.0 * std::atan(std::exp(-eta));
+    double pt = std::sqrt(energy*energy - mass*mass) * std::sin(theta);
+    return pt;
+}
 
 // ------------ method called for each event  ------------
 
@@ -134,32 +146,61 @@ void ScoutingMonitoring::dqmAnalyze(edm::Event const& iEvent,
   histos.sctElectron.h1N->Fill(sctEls->size());
   // unsigned int leadSctElIndx = 0, subleadSctElIndx = -1;
 
+  // Sort scouting electrons by pt - They are unordered in the collection by default
+  // Get an index list of the same size as scouting electrons
+  std::vector<int> sortedSctIdx(sctEls->size());
+  std::iota(sortedSctIdx.begin(), sortedSctIdx.end(), 0);
+  // Sort the indices based on the pt of the scouting electrons
+  std::sort(sortedSctIdx.begin(), sortedSctIdx.end(),
+            [&](int i, int j) { return sctEls->at(i).pt() > sctEls->at(j).pt(); });
+
   std::vector<int> tight_sctElectron_index;
-  int sct_index = 0;
-  for (const auto& el : *sctEls) {
-    histos.sctElectron.electrons.h1Pt->Fill(el.pt());
-    histos.sctElectron.electrons.h1Eta->Fill(el.eta());
-    histos.sctElectron.electrons.h1Phi->Fill(el.phi());
-    if (scoutingElectronID(el)) tight_sctElectron_index.push_back(sct_index);
-    sct_index += 1;
-    // Find the leading and subleading Run3ScoutingElectron
-    // if (el.pt() > sctEls->at(leadSctElIndx).pt()) {
-    //   subleadSctElIndx = leadSctElIndx;
-    //   leadSctElIndx = &el - &sctEls->at(0);
-    // } else if (el.pt() > sctEls->at(subleadSctElIndx).pt()) {
-    //   subleadSctElIndx = &el - &sctEls->at(0);
-    // }
+  for (int idx : sortedSctIdx) {
+    histos.sctElectron.electrons.h1Pt->Fill(sctEls->at(idx).pt());
+    histos.sctElectron.electrons.h1Eta->Fill(sctEls->at(idx).eta());
+    histos.sctElectron.electrons.h1Phi->Fill(sctEls->at(idx).phi());
+    if (scoutingElectronID(sctEls->at(idx))) tight_sctElectron_index.push_back(idx);
   }
+  sortedSctIdx.clear();
   if (tight_sctElectron_index.size() > 0 && sctEls->size() > 1){
     math::PtEtaPhiMLorentzVector first_sct_el(sctEls->at(0).pt(), sctEls->at(0).eta(), sctEls->at(0).phi(), sctEls->at(0).m());
     math::PtEtaPhiMLorentzVector second_sct_el(sctEls->at(1).pt(), sctEls->at(1).eta(), sctEls->at(1).phi(), sctEls->at(1).m());
+    // Use function to measure invariant mass with uniquely associated tracks
     histos.sctElectron.h1InvMass12->Fill((first_sct_el + second_sct_el).mass());
   }
  
   if (tight_sctElectron_index.size() == 2){
-    math::PtEtaPhiMLorentzVector first_sct_el(sctEls->at(tight_sctElectron_index[0]).pt(), sctEls->at(tight_sctElectron_index[0]).eta(), sctEls->at(tight_sctElectron_index[0]).phi(), sctEls->at(tight_sctElectron_index[0]).m());
-    math::PtEtaPhiMLorentzVector second_sct_el(sctEls->at(tight_sctElectron_index[1]).pt(), sctEls->at(tight_sctElectron_index[1]).eta(), sctEls->at(tight_sctElectron_index[1]).phi(), sctEls->at(tight_sctElectron_index[1]).m());
-    histos.sctElectron.h1InvMassID->Fill((first_sct_el + second_sct_el).mass());
+
+    math::PtEtaPhiMLorentzVector sctEl0(sctEls->at(tight_sctElectron_index[0]).pt(), sctEls->at(tight_sctElectron_index[0]).eta(), sctEls->at(tight_sctElectron_index[0]).phi(), 0.0005);
+    math::PtEtaPhiMLorentzVector sctEl1(sctEls->at(tight_sctElectron_index[1]).pt(), sctEls->at(tight_sctElectron_index[1]).eta(), sctEls->at(tight_sctElectron_index[1]).phi(), 0.0005);
+    size_t gsfTrkIdx0 = 9999, gsfTrkIdx1 = 9999;
+    bool foundGoodGsfTrkIdx0 = scoutingElectronGsfTrackIdx(sctEls->at(tight_sctElectron_index[0]), gsfTrkIdx0);
+    bool foundGoodGsfTrkIdx1 = scoutingElectronGsfTrackIdx(sctEls->at(tight_sctElectron_index[1]), gsfTrkIdx1);
+
+    if (!foundGoodGsfTrkIdx0 || !foundGoodGsfTrkIdx1) return;
+
+    math::PtEtaPhiMLorentzVector sctElCombined0(getPtFromEnergyMassEta(sctEl0.energy(), 0.0005, sctEls->at(tight_sctElectron_index[0]).trketa()[gsfTrkIdx0]),
+                                                sctEls->at(tight_sctElectron_index[0]).trketa()[gsfTrkIdx0],
+                                                sctEls->at(tight_sctElectron_index[0]).trkphi()[gsfTrkIdx0], 0.0005);
+    math::PtEtaPhiMLorentzVector sctElCombined1(getPtFromEnergyMassEta(sctEl1.energy(), 0.0005, sctEls->at(tight_sctElectron_index[1]).trketa()[gsfTrkIdx1]),
+                                                sctEls->at(tight_sctElectron_index[1]).trketa()[gsfTrkIdx1],
+                                                sctEls->at(tight_sctElectron_index[1]).trkphi()[gsfTrkIdx1], 0.0005);
+
+    double invMass = (sctElCombined0 + sctElCombined1).mass();
+    histos.sctElectron.h1InvMassID->Fill(invMass);
+    if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) < 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) < 1.479){
+      histos.sctElectron.h1InvMassIDEBEB->Fill(invMass);
+    }
+    else if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) < 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) > 1.479){
+      histos.sctElectron.h1InvMassIDEBEE->Fill(invMass);
+    }
+    else if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) > 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) < 1.479){
+      histos.sctElectron.h1InvMassIDEBEE->Fill(invMass);
+    }
+    else {
+      histos.sctElectron.h1InvMassIDEEEE->Fill(invMass);
+    } 
+
   }
 }
 
@@ -253,6 +294,12 @@ void ScoutingMonitoring::bookHistograms(DQMStore::IBooker& ibook,
       "sctElectron_E1E2_invMass", "sctElectron_E1E2_invMass", 400, 0., 200.);
   histos.sctElectron.h1InvMassID = ibook.book1D(
       "sctElectron_appliedID_invMass", "sctElectron_appliedID_invMass", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEBEB = ibook.book1D(
+      "sctElectron_EBEB_appliedID_invMass", "sctElectron_EBEB_appliedID_invMass", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEBEE = ibook.book1D(
+      "sctElectron_EBEE_appliedID_invMass", "sctElectron_EBEE_appliedID_invMass", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEEEE = ibook.book1D(
+      "sctElectron_EEEE_appliedID_invMass", "sctElectron_EEEE_appliedID_invMass", 400, 0., 200.);
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the
@@ -275,7 +322,7 @@ void ScoutingMonitoring::fillDescriptions(
 
 bool ScoutingMonitoring::scoutingElectronID(const Run3ScoutingElectron el) const{
 
-  bool isEB = (fabs(el.eta()) < 1.5);
+  bool isEB = (fabs(el.eta()) < 1.479);
   if (isEB){
     if(el.sigmaIetaIeta() > 0.015) return false;
     if(el.hOverE() > 0.2) return false;
@@ -293,6 +340,53 @@ bool ScoutingMonitoring::scoutingElectronID(const Run3ScoutingElectron el) const
     if(el.ecalIso()/el.pt() > 0.1) return false;
     return true;
   }
+}
+
+bool ScoutingMonitoring::scoutingElectronGsfTrackID(const Run3ScoutingElectron el, size_t trackIdx) const{
+
+  if(trackIdx > el.trkpt().size()) edm::LogError("ScoutingMonitoring") << "Invalid track index for electron: Exceeds the number of tracks";
+
+  math::PtEtaPhiMLorentzVector particleSC(el.pt(), el.eta(), el.phi(), 0.0005);
+  math::PtEtaPhiMLorentzVector particleTrk(el.trkpt()[trackIdx], el.trketa()[trackIdx], el.trkphi()[trackIdx], 0.0005);
+
+  double scEnergy = particleSC.energy();
+  double trkEnergy = particleTrk.energy();
+  double relEnergyDiff = fabs(scEnergy - trkEnergy) / scEnergy;
+  double dPhi = deltaPhi(particleSC.phi(), particleTrk.phi());
+
+  bool isEB = (fabs(el.eta()) < 1.479);
+  if(isEB) {
+    if(el.trkpt()[trackIdx] < 12) return false;
+    if(relEnergyDiff > 1) return false;
+    if(dPhi > 0.06) return false;
+    if(el.trkchi2overndf()[trackIdx] > 3) return false;
+    return true;
+  }
+  else {
+    if(el.trkpt()[trackIdx] < 12) return false;
+    if(relEnergyDiff > 1) return false;
+    if(dPhi > 0.06) return false;
+    if(el.trkchi2overndf()[trackIdx] > 2) return false;
+    return true;
+  }
+}
+
+bool ScoutingMonitoring::scoutingElectronGsfTrackIdx(const Run3ScoutingElectron el, size_t &trackIdx) const{
+  bool foundGoodGsfTrkIdx = false;
+  for(size_t i = 0; i < el.trkpt().size(); ++i){
+    if(scoutingElectronGsfTrackID(el, i)){
+      if(!foundGoodGsfTrkIdx) {
+        foundGoodGsfTrkIdx = true;
+        trackIdx = i;
+      }
+      else {
+        double relPtDiff = fabs(el.trkpt()[i] - el.pt()) / el.pt();
+        double relPtDiffOld = fabs(el.trkpt()[trackIdx] - el.pt()) / el.pt();
+        if(relPtDiff < relPtDiffOld) trackIdx = i;
+      }
+    }
+  }
+  return foundGoodGsfTrkIdx;
 }
 
 // define this as a plug-in
