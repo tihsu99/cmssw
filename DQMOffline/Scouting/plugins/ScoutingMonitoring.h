@@ -51,6 +51,9 @@ struct kInvmHistos {
   kThreeMomentumHistos electron2;
   dqm::reco::MonitorElement* h1InvMass12;
   dqm::reco::MonitorElement* h1InvMassID;
+  dqm::reco::MonitorElement* h1InvMassIDEBEB;
+  dqm::reco::MonitorElement* h1InvMassIDEBEE;
+  dqm::reco::MonitorElement* h1InvMassIDEEEE;
 };
 
 struct kHistogramsScoutingMonitoring {
@@ -73,6 +76,8 @@ class ScoutingMonitoring
   void dqmAnalyze(edm::Event const&, edm::EventSetup const&,
                   kHistogramsScoutingMonitoring const&) const override;
   bool scoutingElectronID(const Run3ScoutingElectron el) const;
+  bool scoutingElectronGsfTrackID(const Run3ScoutingElectron el, size_t) const;
+  bool scoutingElectronGsfTrackIdx(const Run3ScoutingElectron el, size_t &) const;
 
   // ------------ member data ------------
   std::string outputInternalPath_;
