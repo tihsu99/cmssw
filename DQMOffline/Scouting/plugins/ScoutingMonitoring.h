@@ -34,6 +34,16 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+#include "DataFormats/Common/interface/TriggerResults.h"
+#include "DataFormats/HLTReco/interface/TriggerEventWithRefs.h"
+#include "DataFormats/HLTReco/interface/TriggerEvent.h"
+#include "DataFormats/HLTReco/interface/TriggerRefsCollections.h"
+#include "DataFormats/HLTReco/interface/TriggerObject.h"
+#include "FWCore/Common/interface/TriggerNames.h"
+#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
+
 //
 // class declaration
 //
@@ -54,6 +64,14 @@ struct kInvmHistos {
   dqm::reco::MonitorElement* h1InvMassIDEBEB;
   dqm::reco::MonitorElement* h1InvMassIDEBEE;
   dqm::reco::MonitorElement* h1InvMassIDEEEE;
+  dqm::reco::MonitorElement* h1InvMassID_passDoubleEG_DST;
+  dqm::reco::MonitorElement* h1InvMassIDEBEB_passDoubleEG_DST;
+  dqm::reco::MonitorElement* h1InvMassIDEBEE_passDoubleEG_DST;
+  dqm::reco::MonitorElement* h1InvMassIDEEEE_passDoubleEG_DST;
+  dqm::reco::MonitorElement* h1InvMassID_passSinglePhoton_DST;
+  dqm::reco::MonitorElement* h1InvMassIDEBEB_passSinglePhoton_DST;
+  dqm::reco::MonitorElement* h1InvMassIDEBEE_passSinglePhoton_DST;
+  dqm::reco::MonitorElement* h1InvMassIDEEEE_passSinglePhoton_DST;
 };
 
 struct kHistogramsScoutingMonitoring {
@@ -78,9 +96,11 @@ class ScoutingMonitoring
   bool scoutingElectronID(const Run3ScoutingElectron el) const;
   bool scoutingElectronGsfTrackID(const Run3ScoutingElectron el, size_t) const;
   bool scoutingElectronGsfTrackIdx(const Run3ScoutingElectron el, size_t &) const;
+  bool hasPatternInHLTPath(const edm::TriggerNames& triggerNames, const std::string& pattern) const;
 
   // ------------ member data ------------
   std::string outputInternalPath_;
+  edm::EDGetToken triggerResultsToken_;
   edm::EDGetTokenT<edm::View<pat::Electron> > electronCollection_;
   edm::EDGetTokenT<std::vector<Run3ScoutingElectron> >
       scoutingElectronCollection_;
