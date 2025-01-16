@@ -42,6 +42,7 @@
 
 ScoutingMonitoring::ScoutingMonitoring(const edm::ParameterSet& iConfig)
     : outputInternalPath_(iConfig.getParameter<std::string>("OutputInternalPath")),
+      triggerResultsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("TriggerResultTag"))),
       electronCollection_(consumes<edm::View<pat::Electron>>(iConfig.getParameter<edm::InputTag>("ElectronCollection"))),
       scoutingElectronCollection_(consumes<std::vector<Run3ScoutingElectron>>(iConfig.getParameter<edm::InputTag>("ScoutingElectronCollection"))),
       eleIdMapTightToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("eleIdMapTight"))){
@@ -97,6 +98,13 @@ void ScoutingMonitoring::dqmAnalyze(edm::Event const& iEvent,
       << "Process pat::Electrons: " << patEls->size();
   edm::LogInfo("ScoutingMonitoring")
       << "Process Run3ScoutingElectrons: " << sctEls->size();
+
+  // Trigger
+  edm::Handle<edm::TriggerResults> triggerResults;
+  iEvent.getByToken(triggerResultsToken_, triggerResults);
+  const edm::TriggerNames& triggerNames = iEvent.triggerNames(*triggerResults);
+  bool fire_doubleEG_DST         = hasPatternInHLTPath(triggerNames, "DST_PFScouting_DoubleEG");
+  bool fire_singlePhoton_DST     = hasPatternInHLTPath(triggerNames, "DST_PFScouting_SinglePhotonEB");
 
   // Loop to verify the sorting of pat::Electron collection - REMOVE IN ONLINE
   // DQM
@@ -201,8 +209,40 @@ void ScoutingMonitoring::dqmAnalyze(edm::Event const& iEvent,
       histos.sctElectron.h1InvMassIDEEEE->Fill(invMass);
     } 
 
+    if(fire_doubleEG_DST){
+      histos.sctElectron.h1InvMassID_passDoubleEG_DST->Fill(invMass);
+      if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) < 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) < 1.479){
+        histos.sctElectron.h1InvMassIDEBEB_passDoubleEG_DST->Fill(invMass);
+      }
+      else if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) < 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) > 1.479){
+        histos.sctElectron.h1InvMassIDEBEE_passDoubleEG_DST->Fill(invMass);
+      }
+      else if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) > 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) < 1.479){
+        histos.sctElectron.h1InvMassIDEBEE_passDoubleEG_DST->Fill(invMass);
+      }
+      else {
+        histos.sctElectron.h1InvMassIDEEEE_passDoubleEG_DST->Fill(invMass);
+      } 
+    }
+    if(fire_singlePhoton_DST){
+      histos.sctElectron.h1InvMassID_passSinglePhoton_DST->Fill(invMass);
+      if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) < 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) < 1.479){
+        histos.sctElectron.h1InvMassIDEBEB_passSinglePhoton_DST->Fill(invMass);
+      }
+      else if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) < 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) > 1.479){
+        histos.sctElectron.h1InvMassIDEBEE_passSinglePhoton_DST->Fill(invMass);
+      }
+      else if(fabs(sctEls->at(tight_sctElectron_index[0]).eta()) > 1.479 && fabs(sctEls->at(tight_sctElectron_index[1]).eta()) < 1.479){
+        histos.sctElectron.h1InvMassIDEBEE_passSinglePhoton_DST->Fill(invMass);
+      }
+      else {
+        histos.sctElectron.h1InvMassIDEEEE_passSinglePhoton_DST->Fill(invMass);
+      } 
+    }
+
   }
 }
+
 
 void ScoutingMonitoring::bookHistograms(DQMStore::IBooker& ibook, 
                                         edm::Run const& run,
@@ -300,6 +340,25 @@ void ScoutingMonitoring::bookHistograms(DQMStore::IBooker& ibook,
       "sctElectron_EBEE_appliedID_invMass", "sctElectron_EBEE_appliedID_invMass", 400, 0., 200.);
   histos.sctElectron.h1InvMassIDEEEE = ibook.book1D(
       "sctElectron_EEEE_appliedID_invMass", "sctElectron_EEEE_appliedID_invMass", 400, 0., 200.);
+
+  histos.sctElectron.h1InvMassID_passDoubleEG_DST = ibook.book1D(
+      "sctElectron_appliedID_invMass_passDoubleEG_DST", "sctElectron_appliedID_invMass_passDoubleEG_DST", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEBEB_passDoubleEG_DST = ibook.book1D(
+      "sctElectron_EBEB_appliedID_invMass_passDoubleEG_DST", "sctElectron_EBEB_appliedID_invMass_passDoubleEG_DST", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEBEE_passDoubleEG_DST = ibook.book1D(
+      "sctElectron_EBEE_appliedID_invMass_passDoubleEG_DST", "sctElectron_EBEE_appliedID_invMass_passDoubleEG_DST", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEEEE_passDoubleEG_DST = ibook.book1D(
+      "sctElectron_EEEE_appliedID_invMass_passDoubleEG_DST", "sctElectron_EEEE_appliedID_invMass_passDoubleEG_DST", 400, 0., 200.);
+
+  histos.sctElectron.h1InvMassID_passSinglePhoton_DST = ibook.book1D(
+      "sctElectron_appliedID_invMass_passSinglePhoton_DST", "sctElectron_appliedID_invMass_passSinglePhoton_DST", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEBEB_passSinglePhoton_DST = ibook.book1D(
+      "sctElectron_EBEB_appliedID_invMass_passSinglePhoton_DST", "sctElectron_EBEB_appliedID_invMass_passSinglePhoton_DST", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEBEE_passSinglePhoton_DST = ibook.book1D(
+      "sctElectron_EBEE_appliedID_invMass_passSinglePhoton_DST", "sctElectron_EBEE_appliedID_invMass_passSinglePhoton_DST", 400, 0., 200.);
+  histos.sctElectron.h1InvMassIDEEEE_passSinglePhoton_DST = ibook.book1D(
+      "sctElectron_EEEE_appliedID_invMass_passSinglePhoton_DST", "sctElectron_EEEE_appliedID_invMass_passSinglePhoton_DST", 400, 0., 200.);
+
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the
@@ -311,6 +370,7 @@ void ScoutingMonitoring::fillDescriptions(
   // is no parameters
   edm::ParameterSetDescription desc;
   desc.add<std::string>("OutputInternalPath", "MY_FOLDER");
+  desc.add<edm::InputTag>("TriggerResultTag", edm::InputTag("TriggerResults", "", "HLT"));
   desc.add<edm::InputTag>("ElectronCollection",
                           edm::InputTag("slimmedElectrons"));
   desc.add<edm::InputTag>("ScoutingElectronCollection",
@@ -387,6 +447,19 @@ bool ScoutingMonitoring::scoutingElectronGsfTrackIdx(const Run3ScoutingElectron 
     }
   }
   return foundGoodGsfTrkIdx;
+}
+
+bool ScoutingMonitoring::hasPatternInHLTPath(const edm::TriggerNames& triggerNames, const std::string& pattern) const{
+
+    for (unsigned int i = 0; i < triggerNames.size(); ++i) {
+        const std::string& triggerName = triggerNames.triggerName(i);
+
+        // Check if triggerName starts with the specified prefix
+        if (triggerName.find(pattern) == 0) {  // Position 0 means it starts with 'prefix'
+            return true; // Pattern match found
+        }
+    }
+    return false; // No match found
 }
 
 // define this as a plug-in

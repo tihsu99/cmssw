@@ -3,10 +3,10 @@ import FWCore.ParameterSet.Config as cms
 process = cms.Process("Demo")
 
 process.load("FWCore.MessageService.MessageLogger_cfi")
-process.MessageLogger.cerr.FwkReport.reportEvery = 10000
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 # Enable LogInfo
 process.MessageLogger.cerr = cms.untracked.PSet(
-    threshold = cms.untracked.string('INFO'),
+    # threshold = cms.untracked.string('ERROR'),
     WARNING = cms.untracked.PSet(
         limit = cms.untracked.int32(0)
     ),
@@ -14,17 +14,17 @@ process.MessageLogger.cerr = cms.untracked.PSet(
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
-process.source = cms.Source("PoolSource",
-    # replace 'myfile.root' with the source file you want to use
-    fileNames = cms.untracked.vstring(
+#process.source = cms.Source("PoolSource",
+#    # replace 'myfile.root' with the source file you want to use
+#    fileNames = cms.untracked.vstring(
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/466/00000/3fae9cd8-0775-4920-b8cd-1dad5f3134c5.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/442/00000/234b60ac-a73e-470c-8274-cb1ef449c53f.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/8de25231-3ffe-49d2-a96a-4c713cff5991.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/425/00000/767f561d-9957-403c-b722-8ccb9031affc.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/416/00000/50c5ef90-3737-4ba2-98ba-aa33ad0caa82.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/ca22fd3d-b378-409d-89a9-7866cf6228d8.root',
-#        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/780a6ec0-5061-4ffd-b86a-1a73aef0588a.root', # big one
-        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/5aaef7fd-ab63-497c-ac23-ca1f98d99ab8.root',
+#        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/780a6ec0-5061-4ffd-b86a-1a73aef0588a.root',
+#        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/5aaef7fd-ab63-497c-ac23-ca1f98d99ab8.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/86cc8673-48be-4a38-a7aa-311d43dbb3e7.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/433/00000/e6522372-1987-42c7-8495-c77605c8081d.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/416/00000/450d2326-8353-4751-8783-b3bcd5b9721c.root',
@@ -49,8 +49,11 @@ process.source = cms.Source("PoolSource",
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/470/00000/6bbc191e-6585-43e7-a084-7c5956a50bc6.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/470/00000/11590d22-6c4a-4a05-89d2-0f0dc9859f39.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/530/00000/521074ea-46d4-42ab-80db-560b0ae366f9.root'
-    )
-)
+#    )
+#)
+
+process.source = cms.Source("DQMRootSource",
+                            fileNames = cms.untracked.vstring("file:OUT_step1.root"))
 
 
 from PhysicsTools.SelectorUtils.tools.vid_id_tools import *
@@ -73,29 +76,18 @@ process.load("DQMOffline.Scouting.PatElectronTagProbeAnalyzer_cfi")
 process.load("DQMOffline.Scouting.ElectronEfficiencyPlotter_cfi")
 process.DQMStore = cms.Service("DQMStore")
 
-process.load("DQMServices.FileIO.DQMFileSaverOnline_cfi")
-#process.load("DQMServices.FileIO.DQMFileSaverPB_cfi")
-process.dqmSaver.tag = 'SCOUTMONIT'
-process.content = cms.EDAnalyzer("EventContentAnalyzer")
+#process.load("DQMServices.FileIO.DQMFileSaverOnline_cfi")
+process.load("DQMServices.Components.DQMEnvironment_cfi")
+process.dqmSaver.workflow = '/ScoutingElectron/myTest/DQM'
+#process.dqmSaver.tag = 'SCOUTMONIT'
+#process.dqmSaver.runNumber = 333334
+#process.content = cms.EDAnalyzer("EventContentAnalyzer")
 
-#process.load("DQMServices.Components.DQMEnvironment_cfi")
-#process.dqmSaver.workflow = '/ScoutingElectron/myTest/DQM'
+process.load("DQMServices.Components.MEtoEDMConverter_cff")
+process.load("DQMServices.Components.DQMStoreStats_cfi")
 
-
-process.p = cms.Path(process.egmGsfElectronIDSequence + process.scoutingMonitoring + process.scoutingMonitoringTagProbe + process.scoutingMonitoringPatElectronTagProbe + process.dqmSaver)
-#process.p1 = cms.Path(cms.Sequence(process.scoutingEfficiencyHarvest + process.dqmSaver))
-#process.schedule = cms.Schedule(process.p, process.p1)
+#process.p = cms.Path(process.egmGsfElectronIDSequence + process.scoutingMonitoring + process.scoutingMonitoringTagProbe + process.scoutingMonitoringPatElectronTagProbe)
+process.p = cms.Path(process.scoutingEfficiencyHarvest)
+process.p1 = cms.Path(process.dqmSaver)
+process.schedule = cms.Schedule(process.p, process.p1)
 #process.p1 = cms.Path(process.scoutingEfficiencyHarvest)
-
-import os
-import tarfile
-
-# Find all ROOT files in the current directory
-root_files = [f for f in os.listdir('.') if f.endswith('.root')]
-print("ROOT files", root_files)
-os.system(f'mv {root_files} output.root')
-# Bundle them into a tarball
-with tarfile.open("all_output_files.tar.gz", "w:gz") as tar:
-    for file in root_files:
-        tar.add(file)
-print(os.listdir('.'))

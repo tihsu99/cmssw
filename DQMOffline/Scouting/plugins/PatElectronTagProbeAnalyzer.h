@@ -13,6 +13,16 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+#include "DataFormats/Common/interface/TriggerResults.h"
+#include "DataFormats/HLTReco/interface/TriggerEventWithRefs.h"
+#include "DataFormats/HLTReco/interface/TriggerEvent.h"
+#include "DataFormats/HLTReco/interface/TriggerRefsCollections.h"
+#include "DataFormats/HLTReco/interface/TriggerObject.h"
+#include "FWCore/Common/interface/TriggerNames.h"
+#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
+
 /////////////////////////
 //  Class declaration  //
 /////////////////////////
@@ -37,20 +47,76 @@ struct kProbeKinematicHistos{
   dqm::reco::MonitorElement* hMissingHits_Endcap;
   dqm::reco::MonitorElement* hTrackfbrem_Barrel;
   dqm::reco::MonitorElement* hTrackfbrem_Endcap;
+  dqm::reco::MonitorElement* hTrack_pt_Barrel;
+  dqm::reco::MonitorElement* hTrack_pt_Endcap;
+  dqm::reco::MonitorElement* hTrack_pMode_Barrel;
+  dqm::reco::MonitorElement* hTrack_pMode_Endcap;
+  dqm::reco::MonitorElement* hTrack_etaMode_Barrel;
+  dqm::reco::MonitorElement* hTrack_etaMode_Endcap;
+  dqm::reco::MonitorElement* hTrack_phiMode_Barrel;
+  dqm::reco::MonitorElement* hTrack_phiMode_Endcap;
+  dqm::reco::MonitorElement* hTrack_qoverpModeError_Barrel;
+  dqm::reco::MonitorElement* hTrack_qoverpModeError_Endcap;
   dqm::reco::MonitorElement* hRelEcalIsolation_Barrel;
   dqm::reco::MonitorElement* hRelEcalIsolation_Endcap;
   dqm::reco::MonitorElement* hRelHcalIsolation_Barrel;
   dqm::reco::MonitorElement* hRelHcalIsolation_Endcap;
   dqm::reco::MonitorElement* hRelTrackIsolation_Barrel;
   dqm::reco::MonitorElement* hRelTrackIsolation_Endcap;
+  dqm::reco::MonitorElement* hPtvsInvMass_Barrel;
+  dqm::reco::MonitorElement* hPtvsInvMass_Endcap;
+  dqm::reco::MonitorElement* hEtavsInvMass;
   dqm::reco::MonitorElement* hInvMass;
 };
 
 struct kTagProbeHistos {
-  kProbeKinematicHistos resonanceZ;
-  kProbeKinematicHistos resonanceJ;
-  kProbeKinematicHistos resonanceY;
-  kProbeKinematicHistos resonanceAll;
+  kProbeKinematicHistos resonanceZ_patElectron;
+  kProbeKinematicHistos resonanceJ_patElectron;
+  kProbeKinematicHistos resonanceY_patElectron;
+  kProbeKinematicHistos resonanceAll_patElectron;
+  kProbeKinematicHistos resonanceZ_sctElectron;
+  kProbeKinematicHistos resonanceJ_sctElectron;
+  kProbeKinematicHistos resonanceY_sctElectron;
+  kProbeKinematicHistos resonanceAll_sctElectron;
+
+  kProbeKinematicHistos resonanceZ_patElectron_passDoubleEG_DST;
+  kProbeKinematicHistos resonanceJ_patElectron_passDoubleEG_DST;
+  kProbeKinematicHistos resonanceY_patElectron_passDoubleEG_DST;
+  kProbeKinematicHistos resonanceAll_patElectron_passDoubleEG_DST;
+  kProbeKinematicHistos resonanceZ_sctElectron_passDoubleEG_DST;
+  kProbeKinematicHistos resonanceJ_sctElectron_passDoubleEG_DST;
+  kProbeKinematicHistos resonanceY_sctElectron_passDoubleEG_DST;
+  kProbeKinematicHistos resonanceAll_sctElectron_passDoubleEG_DST;
+
+  kProbeKinematicHistos resonanceZ_patElectron_passDoubleEG_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceJ_patElectron_passDoubleEG_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceY_patElectron_passDoubleEG_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceAll_patElectron_passDoubleEG_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceZ_sctElectron_passDoubleEG_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceJ_sctElectron_passDoubleEG_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceY_sctElectron_passDoubleEG_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceAll_sctElectron_passDoubleEG_DST_fireTrigObj;
+
+
+  kProbeKinematicHistos resonanceZ_patElectron_passSinglePhoton_DST;
+  kProbeKinematicHistos resonanceJ_patElectron_passSinglePhoton_DST;
+  kProbeKinematicHistos resonanceY_patElectron_passSinglePhoton_DST;
+  kProbeKinematicHistos resonanceAll_patElectron_passSinglePhoton_DST;
+  kProbeKinematicHistos resonanceZ_sctElectron_passSinglePhoton_DST;
+  kProbeKinematicHistos resonanceJ_sctElectron_passSinglePhoton_DST;
+  kProbeKinematicHistos resonanceY_sctElectron_passSinglePhoton_DST;
+  kProbeKinematicHistos resonanceAll_sctElectron_passSinglePhoton_DST;
+
+  kProbeKinematicHistos resonanceZ_patElectron_passSinglePhoton_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceJ_patElectron_passSinglePhoton_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceY_patElectron_passSinglePhoton_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceAll_patElectron_passSinglePhoton_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceZ_sctElectron_passSinglePhoton_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceJ_sctElectron_passSinglePhoton_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceY_sctElectron_passSinglePhoton_DST_fireTrigObj;
+  kProbeKinematicHistos resonanceAll_sctElectron_passSinglePhoton_DST_fireTrigObj;
+
+
 };
 
 class PatElectronTagProbeAnalyzer: public DQMGlobalEDAnalyzer<kTagProbeHistos> {
@@ -64,10 +130,18 @@ class PatElectronTagProbeAnalyzer: public DQMGlobalEDAnalyzer<kTagProbeHistos> {
         void bookHistograms(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &, kTagProbeHistos &) const override;
         void bookHistograms_resonance(DQMStore::IBooker &, edm::Run const &, edm::EventSetup const &, kProbeKinematicHistos &, const std::string &) const;
         void fillHistograms_resonance(const kProbeKinematicHistos histos, const pat::Electron el, const float inv_mass) const;
+        void fillHistograms_resonance_sct(const kProbeKinematicHistos histos, const Run3ScoutingElectron el, const float inv_mass) const;
+        double getPtFromEnergyMassEta(double energy, double mass, double eta) const;
         bool scoutingElectronID(const Run3ScoutingElectron el) const;
-
+        bool scoutingElectronGsfTrackID(const Run3ScoutingElectron el, size_t trackIdx) const;
+        bool scoutingElectronGsfTrackIdx(const Run3ScoutingElectron el, size_t &trackIdx) const;
+        bool hasPatternInHLTPath(const edm::TriggerNames& triggerNames, const std::string& pattern) const;
+        bool scoutingElectron_passHLT(float el_eta, float el_phi, TString filter, trigger::TriggerObjectCollection legObjects) const;
+        bool patElectron_passHLT(const pat::Electron el, TString filter, trigger::TriggerObjectCollection legObjects) const;
         // --------------------- member data  ----------------------
         std::string outputInternalPath_;
+        edm::EDGetToken triggerResultsToken_;
+        edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
         edm::EDGetTokenT<edm::View<pat::Electron>> electronCollection_;
         edm::EDGetTokenT<std::vector<Run3ScoutingElectron>> scoutingElectronCollection_;
         edm::EDGetTokenT<edm::ValueMap<bool> > eleIdMapTightToken_;
