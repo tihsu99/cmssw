@@ -53,19 +53,19 @@ process.source = cms.Source("PoolSource",
 )
 
 
-from PhysicsTools.SelectorUtils.tools.vid_id_tools import *
+#from PhysicsTools.SelectorUtils.tools.vid_id_tools import *
 # turn on VID producer, indicate data format  to be
 # DataFormat.AOD or DataFormat.MiniAOD, as appropriate 
 
-dataFormat = DataFormat.MiniAOD
-switchOnVIDElectronIdProducer(process, dataFormat)
+#dataFormat = DataFormat.MiniAOD
+#switchOnVIDElectronIdProducer(process, dataFormat)
 
 # define which IDs we want to produce
-my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElectronID_Winter22_122X_V1_cff']
+#my_id_modules = ['RecoEgamma.ElectronIdentification.Identification.cutBasedElectronID_Winter22_122X_V1_cff']
 
 #add them to the VID producer
-for idmod in my_id_modules:
-    setupAllVIDIdsInModule(process,idmod,setupVIDElectronSelection)
+#for idmod in my_id_modules:
+#    setupAllVIDIdsInModule(process,idmod,setupVIDElectronSelection)
 
 process.load("DQMOffline.Scouting.ScoutingMonitoring_cfi")
 process.load("DQMOffline.Scouting.ScoutingElectronTagProbeAnalyzer_cfi")
@@ -80,9 +80,10 @@ process.content = cms.EDAnalyzer("EventContentAnalyzer")
 
 #process.load("DQMServices.Components.DQMEnvironment_cfi")
 #process.dqmSaver.workflow = '/ScoutingElectron/myTest/DQM'
+process.load("DQMOffline.Scouting.ScoutingEGammaDQMOffline_cff")
 
-
-process.p = cms.Path(process.egmGsfElectronIDSequence + process.scoutingMonitoring + process.scoutingMonitoringTagProbe + process.scoutingMonitoringPatElectronTagProbe + process.dqmSaver)
+process.p = cms.Path(process.scoutingEGammaDQMOffline)
+#process.p = cms.Path(process.egmGsfElectronIDSequence + process.scoutingMonitoring + process.scoutingMonitoringTagProbe + process.scoutingMonitoringPatElectronTagProbe + process.dqmSaver)
 #process.p1 = cms.Path(cms.Sequence(process.scoutingEfficiencyHarvest + process.dqmSaver))
 #process.schedule = cms.Schedule(process.p, process.p1)
 #process.p1 = cms.Path(process.scoutingEfficiencyHarvest)

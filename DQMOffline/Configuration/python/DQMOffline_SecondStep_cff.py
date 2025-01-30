@@ -17,6 +17,8 @@ from DQMServices.Components.DQMFEDIntegrityClient_cff import *
 from DQMOffline.L1Trigger.L1TriggerDqmOffline_cff import *
 from DQM.SiTrackerPhase2.Phase2TrackerDQMHarvesting_cff import *
 from DQM.SiPixelHeterogeneous.SiPixelHeterogenousDQMHarvesting_cff import *
+from DQMOffline.Scouting.scoutingEGammaDQMOfflineHarvest_cff import *
+
 
 DQMNone = cms.Sequence()
 
@@ -96,6 +98,8 @@ DQMOffline_SecondStepMUO = cms.Sequence ( muonQualityTests )
 
 DQMOffline_SecondStepEGamma = cms.Sequence( egammaPostProcessing )
 
+DQMOffline_SecondStepScoutingEGamma = cms.Sequence(scoutingEGammaDQMOfflineHarvest)
+
 DQMOffline_SecondStepTrigger = cms.Sequence( triggerOfflineDQMClient *
 						hltOfflineDQMClient )
 
@@ -108,6 +112,7 @@ DQMOffline_SecondStepJetMET = cms.Sequence( SusyPostProcessorSequence )
 DQMOffline_SecondStep_PrePOG = cms.Sequence( DQMOffline_SecondStepTracking *
                                              DQMOffline_SecondStepMUO *
                                              DQMOffline_SecondStepEGamma *
+                                             DQMOffline_SecondStepScoutingEGamma *
                                              DQMOffline_SecondStepTrigger *
                                              DQMOffline_SecondStepBTag *
                                              DQMOffline_SecondStepBeam *

@@ -20,6 +20,7 @@ from DQM.CTPPS.ctppsDQM_cff import *
 from DQM.SiTrackerPhase2.Phase2TrackerDQMFirstStep_cff import *
 from DQM.SiPixelHeterogeneous.SiPixelHeterogenousDQM_FirstStep_cff import *
 
+
 DQMNone = cms.Sequence()
 
 DQMMessageLoggerSeq = cms.Sequence( DQMMessageLogger )
@@ -121,6 +122,7 @@ from DQMOffline.RecoB.dqmAnalyzer_cff import *
 from DQM.BeamMonitor.AlcaBeamMonitor_cff import *
 from DQM.Physics.DQMPhysics_cff import *
 from DQM.Physics.heavyFlavorDQMFirstStep_cff import *
+from DQMOffline.Scouting.ScoutingEGammaDQMOffline_cff import *
 
 DQMOfflineVertex = cms.Sequence( pvMonitor )
 
@@ -137,6 +139,8 @@ DQMOfflineJetMET = cms.Sequence( jetMETDQMOfflineSource )
 
 DQMOfflineEGamma = cms.Sequence( egammaDQMOffline )
 
+DQMOfflineScoutingEGamma = cms.Sequence( scoutingEGammaDQMOffline )
+
 DQMOfflineTrigger = cms.Sequence( triggerOfflineDQMSource )
 
 DQMOfflineBTag = cms.Sequence( bTagPlotsDATA )
@@ -151,6 +155,7 @@ DQMOfflinePrePOG = cms.Sequence( DQMOfflineTracking *
                                  DQMOfflineMUO *
                                  DQMOfflineJetMET *
                                  DQMOfflineEGamma *
+                                 DQMOfflineScoutingEGamma *
                                  DQMOfflineTrigger *
                                  DQMOfflineBTag *
                                  DQMOfflineBeam *
