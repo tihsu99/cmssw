@@ -130,6 +130,10 @@ autoDQM = { 'DQMMessageLogger': ['DQMMessageLoggerSeq',
                        'PostDQMOffline',
                        'DQMHarvestEGamma+DQMCertEGamma'],
 
+            'scoutingegamma':['DQMOfflineScoutingEGamma',
+                              'PostDQMOffline',
+                              'DQMOffline_SecondStepScoutingEGamma'],
+  
             'ctpps': ['DQMOfflineCTPPS',
                       'PostDQMOffline',
                       'DQMHarvestCTPPS'],

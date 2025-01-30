@@ -8,7 +8,7 @@ PatElectronTagProbeAnalysis = DQMEDAnalyzer('PatElectronTagProbeAnalyzer',
     TriggerObjects     = cms.InputTag("slimmedPatTrigger"),
     ElectronCollection = cms.InputTag('slimmedElectrons'),
     ScoutingElectronCollection = cms.InputTag('hltScoutingEgammaPacker'),
-    eleIdMapTight = cms.InputTag('egmGsfElectronIDs:cutBasedElectronID-RunIIIWinter22-V1-tight')
+    eleIdMapTight = cms.InputTag('egmGsfElectronIDsForScoutingDQM:cutBasedElectronID-RunIIIWinter22-V1-tight')
 
 )
 

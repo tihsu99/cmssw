@@ -27,5 +27,4 @@ ScoutingElectronTagProbeAnalysis = DQMEDAnalyzer('ScoutingElectronTagProbeAnalyz
 
 )
 
-
 scoutingMonitoringTagProbe = cms.Sequence(ScoutingElectronTagProbeAnalysis) # * ScoutingElectronEfficiencySummary)
