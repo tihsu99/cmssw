@@ -1,32 +1,25 @@
-#ifndef ElectronEfficiencyPlotter_H
-#define ElectronEfficiencyPlotter_H
+#ifndef HLTriggerOffline_Scouting_ElectronEfficiencyPlotter_H
+#define HLTriggerOffline_Scouting_ElectronEfficiencyPlotter_H
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "DQMServices/Core/interface/DQMEDHarvester.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include <FWCore/Framework/interface/ESHandle.h>
-#include <FWCore/Framework/interface/Event.h>
-#include <FWCore/Framework/interface/MakerMacros.h>
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include <FWCore/Framework/interface/LuminosityBlock.h>
+#include "FWCore/Framework/interface/LuminosityBlock.h"
 
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
-#include "FWCore/Framework/interface/Run.h"
 
-#include <memory>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <map>
-#include "TH1F.h"
 
 class ElectronEfficiencyPlotter : public DQMEDHarvester {
 public:
   // Constructor
   ElectronEfficiencyPlotter(const edm::ParameterSet& ps);
   // Destructor
-  ~ElectronEfficiencyPlotter() override;
+  ~ElectronEfficiencyPlotter() override = default;
 
 protected:
   // DQM Client Diagnostic
@@ -34,16 +27,10 @@ protected:
 
 private:
   // counters
-  int nevents;
-  unsigned int nLumiSegs;
-  int prescaleFactor;
-  int run;
 
-  edm::ParameterSet parameters;
-
-  int ptBin;
-  double ptMin;
-  double ptMax;
+  int ptBin_;
+  double ptMin_;
+  double ptMax_;
 
   std::string ID_;
 
@@ -54,7 +41,7 @@ private:
 
   std::string theFolder_;
   std::string sourceFolder_;
-  void GetEfficiency(MonitorElement* Numerator, MonitorElement* Denominator, MonitorElement* Efficiency);
+  void calculateEfficiency(MonitorElement* Numerator, MonitorElement* Denominator, MonitorElement* Efficiency);
 };
 
 #endif

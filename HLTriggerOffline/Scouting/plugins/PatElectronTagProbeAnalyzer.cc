@@ -319,15 +319,15 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
 }
 
 bool PatElectronTagProbeAnalyzer::scoutingElectronID(const Run3ScoutingElectron el) const {
-  bool isEB = (fabs(el.eta()) < 1.5);
+  bool isEB = (std::abs(el.eta()) < 1.5);
   if (isEB) {
     if (el.sigmaIetaIeta() > 0.015)
       return false;
     if (el.hOverE() > 0.2)
       return false;
-    if (fabs(el.dEtaIn()) > 0.008)
+    if (std::abs(el.dEtaIn()) > 0.008)
       return false;
-    if (fabs(el.dPhiIn()) > 0.06)
+    if (std::abs(el.dPhiIn()) > 0.06)
       return false;
     if (el.ecalIso() / el.rawEnergy() > 0.25)
       return false;
@@ -338,9 +338,9 @@ bool PatElectronTagProbeAnalyzer::scoutingElectronID(const Run3ScoutingElectron 
       return false;
     if (el.hOverE() > 0.2)
       return false;
-    if (fabs(el.dEtaIn()) > 0.012)
+    if (std::abs(el.dEtaIn()) > 0.012)
       return false;
-    if (fabs(el.dPhiIn()) > 0.06)
+    if (std::abs(el.dPhiIn()) > 0.06)
       return false;
     if (el.ecalIso() / el.rawEnergy() > 0.1)
       return false;
@@ -360,8 +360,8 @@ void PatElectronTagProbeAnalyzer::fillHistograms_resonance(const kProbeKinematic
     histos.hPt_Barrel->Fill(el.pt());
     histos.hHoverE_Barrel->Fill(el.hadronicOverEm());
     histos.hOoEMOoP_Barrel->Fill((1.0 / el.ecalEnergy() - el.eSuperClusterOverP() / el.ecalEnergy()));
-    histos.hdPhiIn_Barrel->Fill(fabs(el.deltaPhiSuperClusterTrackAtVtx()));
-    histos.hdEtaIn_Barrel->Fill(fabs(el.deltaEtaSuperClusterTrackAtVtx()));
+    histos.hdPhiIn_Barrel->Fill(std::abs(el.deltaPhiSuperClusterTrackAtVtx()));
+    histos.hdEtaIn_Barrel->Fill(std::abs(el.deltaEtaSuperClusterTrackAtVtx()));
     histos.hSigmaIetaIeta_Barrel->Fill(el.sigmaIetaIeta());
     histos.hMissingHits_Barrel->Fill(
         el.gsfTrack()->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS));
@@ -374,8 +374,8 @@ void PatElectronTagProbeAnalyzer::fillHistograms_resonance(const kProbeKinematic
     histos.hPt_Endcap->Fill(el.pt());
     histos.hHoverE_Endcap->Fill(el.hadronicOverEm());
     histos.hOoEMOoP_Endcap->Fill((1.0 / el.ecalEnergy() - el.eSuperClusterOverP() / el.ecalEnergy()));
-    histos.hdPhiIn_Endcap->Fill(fabs(el.deltaPhiSuperClusterTrackAtVtx()));
-    histos.hdEtaIn_Endcap->Fill(fabs(el.deltaEtaSuperClusterTrackAtVtx()));
+    histos.hdPhiIn_Endcap->Fill(std::abs(el.deltaPhiSuperClusterTrackAtVtx()));
+    histos.hdEtaIn_Endcap->Fill(std::abs(el.deltaEtaSuperClusterTrackAtVtx()));
     histos.hSigmaIetaIeta_Endcap->Fill(el.sigmaIetaIeta());
     histos.hMissingHits_Endcap->Fill(
         el.gsfTrack()->hitPattern().numberOfLostHits(reco::HitPattern::MISSING_INNER_HITS));
@@ -395,12 +395,12 @@ void PatElectronTagProbeAnalyzer::fillHistograms_resonance_sct(const kProbeKinem
   histos.hInvMass->Fill(inv_mass);
   histos.hEtavsInvMass->Fill(el.eta(), inv_mass);
 
-  if (fabs(el.eta()) < 1.5) {
+  if (std::abs(el.eta()) < 1.5) {
     histos.hPt_Barrel->Fill(el.pt());
     histos.hHoverE_Barrel->Fill(el.hOverE());
     histos.hOoEMOoP_Barrel->Fill(el.ooEMOop());
-    histos.hdPhiIn_Barrel->Fill(fabs(el.dPhiIn()));
-    histos.hdEtaIn_Barrel->Fill(fabs(el.dEtaIn()));
+    histos.hdPhiIn_Barrel->Fill(std::abs(el.dPhiIn()));
+    histos.hdEtaIn_Barrel->Fill(std::abs(el.dEtaIn()));
     histos.hSigmaIetaIeta_Barrel->Fill(el.sigmaIetaIeta());
     histos.hMissingHits_Barrel->Fill(el.missingHits());
     histos.hTrackfbrem_Barrel->Fill(el.trackfbrem());
@@ -427,8 +427,8 @@ void PatElectronTagProbeAnalyzer::fillHistograms_resonance_sct(const kProbeKinem
     histos.hPt_Endcap->Fill(el.pt());
     histos.hHoverE_Endcap->Fill(el.hOverE());
     histos.hOoEMOoP_Endcap->Fill(el.ooEMOop());
-    histos.hdPhiIn_Endcap->Fill(fabs(el.dPhiIn()));
-    histos.hdEtaIn_Endcap->Fill(fabs(el.dEtaIn()));
+    histos.hdPhiIn_Endcap->Fill(std::abs(el.dPhiIn()));
+    histos.hdEtaIn_Endcap->Fill(std::abs(el.dEtaIn()));
     histos.hSigmaIetaIeta_Endcap->Fill(el.sigmaIetaIeta());
     histos.hMissingHits_Endcap->Fill(el.missingHits());
     histos.hTrackfbrem_Endcap->Fill(el.trackfbrem());
@@ -721,12 +721,7 @@ void PatElectronTagProbeAnalyzer::bookHistograms_resonance(DQMStore::IBooker& ib
   histos.hInvMass = ibook.book1D(name + "_Invariant_Mass", name + "_Invariant_Mass", 800, 0, 200);
 }
 
-// ------------ method fills 'descriptions' with the allowed parameters for the
-// module  ------------
 void PatElectronTagProbeAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-  // The following says we do not know what parameters are allowed so do no
-  // validation Please change this to state exactly what you do use, even if it
-  // is no parameters
   edm::ParameterSetDescription desc;
   desc.add<std::string>("OutputInternalPath", "MY_FOLDER");
   desc.add<edm::InputTag>("TriggerResultTag", edm::InputTag("TriggerResults", "", "HLT"));
@@ -739,9 +734,8 @@ void PatElectronTagProbeAnalyzer::fillDescriptions(edm::ConfigurationDescription
 }
 
 double PatElectronTagProbeAnalyzer::getPtFromEnergyMassEta(double energy, double mass, double eta) const {
-  double theta = 2.0 * std::atan(std::exp(-eta));
-  double pt = std::sqrt(energy * energy - mass * mass) * std::sin(theta);
-  return pt;
+    double transverseEnergy = std::sqrt(energy * energy - mass * mass);
+    return transverseEnergy / std::cosh(eta);
 }
 
 bool PatElectronTagProbeAnalyzer::scoutingElectronGsfTrackID(const Run3ScoutingElectron el, size_t trackIdx) const {
@@ -753,10 +747,10 @@ bool PatElectronTagProbeAnalyzer::scoutingElectronGsfTrackID(const Run3ScoutingE
 
   double scEnergy = particleSC.energy();
   double trkEnergy = particleTrk.energy();
-  double relEnergyDiff = fabs(scEnergy - trkEnergy) / scEnergy;
+  double relEnergyDiff = std::abs(scEnergy - trkEnergy) / scEnergy;
   double dPhi = deltaPhi(particleSC.phi(), particleTrk.phi());
 
-  bool isEB = (fabs(el.eta()) < 1.479);
+  bool isEB = (std::abs(el.eta()) < 1.479);
   if (isEB) {
     if (el.trkpt()[trackIdx] < 12)
       return false;
@@ -788,8 +782,8 @@ bool PatElectronTagProbeAnalyzer::scoutingElectronGsfTrackIdx(const Run3Scouting
         foundGoodGsfTrkIdx = true;
         trackIdx = i;
       } else {
-        double relPtDiff = fabs(el.trkpt()[i] - el.pt()) / el.pt();
-        double relPtDiffOld = fabs(el.trkpt()[trackIdx] - el.pt()) / el.pt();
+        double relPtDiff = std::abs(el.trkpt()[i] - el.pt()) / el.pt();
+        double relPtDiffOld = std::abs(el.trkpt()[trackIdx] - el.pt()) / el.pt();
         if (relPtDiff < relPtDiffOld)
           trackIdx = i;
       }
@@ -817,8 +811,8 @@ bool PatElectronTagProbeAnalyzer::scoutingElectron_passHLT(float el_eta,
                                                            trigger::TriggerObjectCollection legObjects) const {
   bool foundTheLeg = false;
   for (unsigned int i = 0; i < legObjects.size(); i++) {
-    float delR = deltaR(legObjects.at(i).eta(), legObjects.at(i).phi(), el_eta, el_phi);
-    if (delR < 0.1) {
+    float delR2 = deltaR2(legObjects.at(i).eta(), legObjects.at(i).phi(), el_eta, el_phi);
+    if (delR2 < 0.01) {
       foundTheLeg = true;
       break;
     }
@@ -831,8 +825,8 @@ bool PatElectronTagProbeAnalyzer::patElectron_passHLT(const pat::Electron el,
                                                       trigger::TriggerObjectCollection legObjects) const {
   bool foundTheLeg = false;
   for (unsigned int i = 0; i < legObjects.size(); i++) {
-    float delR = deltaR(legObjects.at(i).eta(), legObjects.at(i).phi(), el.eta(), el.phi());
-    if (delR < 0.1) {
+    float delR2 = deltaR2(legObjects.at(i).eta(), legObjects.at(i).phi(), el.eta(), el.phi());
+    if (delR2 < 0.01) {
       foundTheLeg = true;
       break;
     }

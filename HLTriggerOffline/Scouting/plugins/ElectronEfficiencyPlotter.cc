@@ -1,19 +1,16 @@
 #include "ElectronEfficiencyPlotter.h"
 
 // Framework
-#include <FWCore/Framework/interface/Event.h>
+#include "FWCore/Framework/interface/Event.h"
 #include "DataFormats/Common/interface/Handle.h"
-#include <FWCore/Framework/interface/ESHandle.h>
-#include <FWCore/Framework/interface/MakerMacros.h>
-#include <FWCore/Framework/interface/EventSetup.h>
-#include <FWCore/ParameterSet/interface/ParameterSet.h>
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "FWCore/Framework/interface/MakerMacros.h"
+#include "FWCore/Framework/interface/EventSetup.h"
+#include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "DQMServices/Core/interface/DQMStore.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FWCore/Framework/interface/Run.h"
 
-#include <iostream>
-#include <cstdio>
 #include <string>
 #include <cmath>
 #include "TF1.h"
@@ -23,30 +20,27 @@ using namespace edm;
 using namespace std;
 
 ElectronEfficiencyPlotter::ElectronEfficiencyPlotter(const edm::ParameterSet &ps) {
-  parameters = ps;
 
-  ptBin = parameters.getParameter<int>("ptBin");
-  ptMin = parameters.getParameter<double>("ptMin");
-  ptMax = parameters.getParameter<double>("ptMax");
+  ptBin_ = ps.getParameter<int>("ptBin");
+  ptMin_ = ps.getParameter<double>("ptMin");
+  ptMax_ = ps.getParameter<double>("ptMax");
 
-  ID_ = parameters.getParameter<string>("sctElectronID");
-  theFolder_ = parameters.getParameter<string>("folder");
-  sourceFolder_ = parameters.getParameter<string>("srcFolder");
+  ID_ = ps.getParameter<string>("sctElectronID");
+  theFolder_ = ps.getParameter<string>("folder");
+  sourceFolder_ = ps.getParameter<string>("srcFolder");
 }
-
-ElectronEfficiencyPlotter::~ElectronEfficiencyPlotter() {}
 
 void ElectronEfficiencyPlotter::dqmEndJob(DQMStore::IBooker &ibooker, DQMStore::IGetter &igetter) {
   ibooker.setCurrentFolder(theFolder_);
 
   h_eff_pt_EB_doubleEG_HLT =
-      ibooker.book1D("Eff_pt_barrel_DSTdoubleEG", "DSTdoubleEG Eff. vs Pt (barrel)", ptBin, ptMin, ptMax);
+      ibooker.book1D("Eff_pt_barrel_DSTdoubleEG", "DSTdoubleEG Eff. vs Pt (barrel)", ptBin_, ptMin_, ptMax_);
   h_eff_pt_EE_doubleEG_HLT =
-      ibooker.book1D("Eff_pt_endcap_DSTdoubleEG", "DSTdoubleEG Eff. vs Pt (endcap)", ptBin, ptMin, ptMax);
+      ibooker.book1D("Eff_pt_endcap_DSTdoubleEG", "DSTdoubleEG Eff. vs Pt (endcap)", ptBin_, ptMin_, ptMax_);
   h_eff_pt_EB_singlePhoton_HLT =
-      ibooker.book1D("Eff_pt_barrel_DSTsinglePhoton", "DSTsinglePhoton Eff. vs Pt (barrel)", ptBin, ptMin, ptMax);
+      ibooker.book1D("Eff_pt_barrel_DSTsinglePhoton", "DSTsinglePhoton Eff. vs Pt (barrel)", ptBin_, ptMin_, ptMax_);
   h_eff_pt_EE_singlePhoton_HLT =
-      ibooker.book1D("Eff_pt_endcap_DSTsinglePhoton", "DSTsinglePhoton Eff. vs Pt (endcap)", ptBin, ptMin, ptMax);
+      ibooker.book1D("Eff_pt_endcap_DSTsinglePhoton", "DSTsinglePhoton Eff. vs Pt (endcap)", ptBin_, ptMin_, ptMax_);
 
   // Axis title
   h_eff_pt_EB_singlePhoton_HLT->setAxisTitle("p_{T} (GeV)", 1);
@@ -68,16 +62,16 @@ void ElectronEfficiencyPlotter::dqmEndJob(DQMStore::IBooker &ibooker, DQMStore::
       igetter.get(sourceFolder_ + "/resonanceZ_Tag_pat_Probe_sctElectron_Pt_Endcap");
 
   if (Numerator_pt_barrel_doubleEG_hlt && Denominator_pt_barrel)
-    GetEfficiency(Numerator_pt_barrel_doubleEG_hlt, Denominator_pt_barrel, h_eff_pt_EB_doubleEG_HLT);
+    calculateEfficiency(Numerator_pt_barrel_doubleEG_hlt, Denominator_pt_barrel, h_eff_pt_EB_doubleEG_HLT);
   if (Numerator_pt_endcap_doubleEG_hlt && Denominator_pt_endcap)
-    GetEfficiency(Numerator_pt_endcap_doubleEG_hlt, Denominator_pt_endcap, h_eff_pt_EE_doubleEG_HLT);
+    calculateEfficiency(Numerator_pt_endcap_doubleEG_hlt, Denominator_pt_endcap, h_eff_pt_EE_doubleEG_HLT);
   if (Numerator_pt_barrel_singlePhoton_hlt && Denominator_pt_barrel)
-    GetEfficiency(Numerator_pt_barrel_singlePhoton_hlt, Denominator_pt_barrel, h_eff_pt_EB_singlePhoton_HLT);
+    calculateEfficiency(Numerator_pt_barrel_singlePhoton_hlt, Denominator_pt_barrel, h_eff_pt_EB_singlePhoton_HLT);
   if (Numerator_pt_endcap_singlePhoton_hlt && Denominator_pt_endcap)
-    GetEfficiency(Numerator_pt_endcap_singlePhoton_hlt, Denominator_pt_endcap, h_eff_pt_EE_singlePhoton_HLT);
+    calculateEfficiency(Numerator_pt_endcap_singlePhoton_hlt, Denominator_pt_endcap, h_eff_pt_EE_singlePhoton_HLT);
 }
 
-void ElectronEfficiencyPlotter::GetEfficiency(MonitorElement *Numerator,
+void ElectronEfficiencyPlotter::calculateEfficiency(MonitorElement *Numerator,
                                               MonitorElement *Denominator,
                                               MonitorElement *Efficiency) {
   TH1F *h_numerator_pt = Numerator->getTH1F();

@@ -119,7 +119,7 @@ struct kTagProbeHistos {
 class PatElectronTagProbeAnalyzer : public DQMGlobalEDAnalyzer<kTagProbeHistos> {
 public:
   explicit PatElectronTagProbeAnalyzer(const edm::ParameterSet& conf);
-  ~PatElectronTagProbeAnalyzer() override;
+  ~PatElectronTagProbeAnalyzer() override = default;
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 
 private:
