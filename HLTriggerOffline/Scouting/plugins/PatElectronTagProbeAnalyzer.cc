@@ -17,12 +17,18 @@
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/Scouting/interface/Run3ScoutingElectron.h"
 #include "FWCore/Common/interface/TriggerNames.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
+#include "HLTrigger/HLTcore/interface/TriggerExpressionData.h"
+#include "HLTrigger/HLTcore/interface/TriggerExpressionEvaluator.h"
+#include "HLTrigger/HLTcore/interface/TriggerExpressionParser.h"
+#include "L1Trigger/L1TGlobal/interface/L1TGlobalUtil.h"
+
 
 #include "ScoutingDQMUtils.h"
 
@@ -71,6 +77,7 @@ struct kProbeKinematicHistos {
   dqm::reco::MonitorElement* hEtavsInvMass;
   dqm::reco::MonitorElement* hInvMass;
 };
+
 
 struct kTagProbeHistos {
   kProbeKinematicHistos resonanceZ_patElectron;
@@ -157,6 +164,17 @@ private:
 
   // --------------------- member data  ----------------------
   const std::string outputInternalPath_;
+
+  const std::vector<std::string> vtriggerSelection_;
+  triggerExpression::Data triggerCache_;
+  std::vector<triggerExpression::Evaluator*> vtriggerSelector_;
+
+  edm::EDGetToken algToken_;
+  std::shared_ptr<l1t::L1TGlobalUtil> l1GtUtils_;
+  std::vector<std::string> l1Seeds_;
+  TString l1Names[100] = {""};
+  Bool_t l1Result[100] = {false};
+
   const edm::EDGetToken triggerResultsToken_;
   const edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
   const edm::EDGetTokenT<edm::View<pat::Electron>> electronCollection_;
@@ -168,18 +186,37 @@ using namespace ROOT;
 
 PatElectronTagProbeAnalyzer::PatElectronTagProbeAnalyzer(const edm::ParameterSet& iConfig)
     : outputInternalPath_(iConfig.getParameter<std::string>("OutputInternalPath")),
-      triggerResultsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("TriggerResultTag"))),
+      vtriggerSelection_{iConfig.getParameter<vector<string>>("triggerSelection")},
+      triggerCache_{triggerExpression::Data(iConfig.getParameterSet("triggerConfiguration"), consumesCollector())},
+      algToken_{consumes<BXVector<GlobalAlgBlk>>(iConfig.getParameter<edm::InputTag>("AlgInputTag"))},
+      triggerResultsToken_(
+          consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("TriggerResultTag"))),
       triggerObjects_(
           consumes<pat::TriggerObjectStandAloneCollection>(iConfig.getParameter<edm::InputTag>("TriggerObjects"))),
       electronCollection_(
           consumes<edm::View<pat::Electron>>(iConfig.getParameter<edm::InputTag>("ElectronCollection"))),
       scoutingElectronCollection_(consumes<std::vector<Run3ScoutingElectron>>(
           iConfig.getParameter<edm::InputTag>("ScoutingElectronCollection"))),
-      eleIdMapTightToken_(consumes<edm::ValueMap<bool>>(iConfig.getParameter<edm::InputTag>("eleIdMapTight"))) {}
+      eleIdMapTightToken_(consumes<edm::ValueMap<bool>>(iConfig.getParameter<edm::InputTag>("eleIdMapTight"))) {
+
+
+          vtriggerSelector_.reserve(vtriggerSelection_.size());
+          for (auto const& vt : vtriggerSelection_)
+              vtriggerSelector_.push_back(triggerExpression::parse(vt));
+          l1GtUtils_ = std::make_shared<l1t::L1TGlobalUtil>(iConfig, consumesCollector(), l1t::UseEventSetupIn::RunAndEvent);
+          l1Seeds_   = iConfig.getParameter<std::vector<std::string>>("L1Seeds");
+          for (unsigned int i = 0; i < l1Seeds_.size(); i++){
+              const auto& l1seed(l1Seeds_.at(i));
+              l1Names[i] = TString(l1seed);
+          }
+
+      }
 
 void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
                                              edm::EventSetup const& iSetup,
                                              kTagProbeHistos const& histos) const {
+
+  // Check if pat electron collection exist.
   edm::Handle<edm::View<pat::Electron>> patEls;
   iEvent.getByToken(electronCollection_, patEls);
   if (patEls.failedToGet()) {
@@ -187,13 +224,15 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
     return;
   }
 
+  // Check if scouting electron collection exist.
   edm::Handle<std::vector<Run3ScoutingElectron>> sctEls;
   iEvent.getByToken(scoutingElectronCollection_, sctEls);
   if (sctEls.failedToGet()) {
     edm::LogWarning("ScoutingMonitoring") << "Run3ScoutingElectron collection not found.";
     return;
   }
-
+ 
+  // Load pat Electron ID.
   edm::Handle<edm::ValueMap<bool>> tight_ele_id_decisions;
   iEvent.getByToken(eleIdMapTightToken_, tight_ele_id_decisions);
 
@@ -211,6 +250,8 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
   edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
   iEvent.getByToken(triggerObjects_, triggerObjects);
 
+
+  // Trigger Object Matching
   std::vector<std::string> filterToMatch = {"hltDoubleEG11CaloIdLHEFilter", "hltEG30EBTightIDTightIsoTrackIsoFilter"};
   size_t numberOfFilters = filterToMatch.size();
   trigger::TriggerObjectCollection* legObjects = new trigger::TriggerObjectCollection[numberOfFilters];
@@ -224,6 +265,8 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
     }
   }
 
+
+  // sct electron gsfTrack finding
   std::vector<int> sctElectron_gsfTrackIndex;
   for (const auto& sct_el : *sctEls) {
     size_t gsfTrkIdx = 9999;
@@ -234,15 +277,17 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
       sctElectron_gsfTrackIndex.push_back(-1);
   }
 
-  // for (const auto& pat_el : *patEls){
+
+  // Tag electron: pat ele collection
+
   for (size_t i = 0; i < patEls->size(); ++i) {
     const auto pat_el = patEls->ptrAt(i);
     if (!((*tight_ele_id_decisions)[pat_el]))
       continue;
-
     ROOT::Math::PtEtaPhiMVector tag_pat_el(pat_el->pt(), pat_el->eta(), pat_el->phi(), pat_el->mass());
+
+    // Probe electron: from pat electron
     for (size_t j = 0; j < patEls->size(); ++j) {
-      //    for (const auto& pat_el_second : *patEls){
       const auto pat_el_second = patEls->ptrAt(j);
       if (i == j)
         continue;
@@ -251,22 +296,30 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
       ROOT::Math::PtEtaPhiMVector probe_pat_el(
           pat_el_second->pt(), pat_el_second->eta(), pat_el_second->phi(), pat_el_second->mass());
       float invMass = (tag_pat_el + probe_pat_el).mass();
+
+      // Z mass windows
       if ((TandP_Z_minMass < invMass) && (invMass < TandP_Z_maxMass)) {
         fillHistograms_resonance(histos.resonanceZ_patElectron, *pat_el_second, invMass);
         fillHistograms_resonance(histos.resonanceAll_patElectron, *pat_el_second, invMass);
       }
+
+      // jpsi mass windows
       if ((TandP_jpsi_minMass < invMass) && (invMass < TandP_jpsi_maxMass)) {
         fillHistograms_resonance(histos.resonanceJ_patElectron,
                                  *pat_el_second,
                                  invMass);  // J/Psi mass: 3.3 +/- 0.2 GeV
         fillHistograms_resonance(histos.resonanceAll_patElectron, *pat_el_second, invMass);
       }
+
+      // ups mass windows
       if ((TandP_ups_minMass < invMass) && (invMass < TandP_ups_maxMass)) {
         fillHistograms_resonance(histos.resonanceY_patElectron,
                                  *pat_el_second,
                                  invMass);  // Y mass: 9.8 +/- 0.4 GeV & 10.6 +/- 1 GeV
         fillHistograms_resonance(histos.resonanceAll_patElectron, *pat_el_second, invMass);
       }
+
+
 
       if (fire_singlePhoton_DST) {
         if ((TandP_Z_minMass < invMass) && (invMass < TandP_Z_maxMass)) {
@@ -858,6 +911,16 @@ void PatElectronTagProbeAnalyzer::bookHistograms_resonance(DQMStore::IBooker& ib
 void PatElectronTagProbeAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
   desc.add<std::string>("OutputInternalPath", "MY_FOLDER");
+  desc.add<vector<string>>("triggerSelection", {});
+  desc.add<edm::InputTag>("AlgInputTag", edm::InputTag("gtStage2Digis"));
+  desc.add<std::vector<std::string>>("L1Seeds", {});
+  desc.add<edm::InputTag>("l1tAlgBlkInputTag", edm::InputTag("gtStage2Digis"));
+  desc.add<edm::InputTag>("l1tExtBlkInputTag", edm::InputTag("gtStage2Digis"));
+  desc.add<bool>("ReadPrescalesFromFile", false);
+
+  edm::ParameterSetDescription triggerConfig;
+      triggerConfig.setAllowAnything();
+  desc.add<edm::ParameterSetDescription>("triggerConfiguration", triggerConfig);
   desc.add<edm::InputTag>("TriggerResultTag", edm::InputTag("TriggerResults", "", "HLT"));
   desc.add<edm::InputTag>("TriggerObjects", edm::InputTag("slimmedPatTrigger"));
   desc.add<edm::InputTag>("ElectronCollection", edm::InputTag("slimmedElectrons"));

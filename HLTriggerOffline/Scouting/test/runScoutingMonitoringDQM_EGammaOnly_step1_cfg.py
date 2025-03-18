@@ -3,6 +3,17 @@ import FWCore.ParameterSet.Config as cms
 process = cms.Process("Demo")
 
 process.load("FWCore.MessageService.MessageLogger_cfi")
+process.load("DQMServices.Components.DQMStoreStats_cfi")
+process.load('Configuration.StandardSequences.GeometryDB_cff')
+process.load('Configuration.StandardSequences.MagneticField_38T_cff')
+process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
+process.load("Configuration.StandardSequences.Reconstruction_cff")
+process.load('Configuration.StandardSequences.Services_cff')
+
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, '140X_dataRun3_Prompt_v4')
+
 process.MessageLogger.cerr.FwkReport.reportEvery = 10000
 # Enable LogInfo
 process.MessageLogger.cerr = cms.untracked.PSet(
@@ -23,7 +34,7 @@ process.source = cms.Source("PoolSource",
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/425/00000/767f561d-9957-403c-b722-8ccb9031affc.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/416/00000/50c5ef90-3737-4ba2-98ba-aa33ad0caa82.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/ca22fd3d-b378-409d-89a9-7866cf6228d8.root',
-#        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/780a6ec0-5061-4ffd-b86a-1a73aef0588a.root', # big one
+        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/780a6ec0-5061-4ffd-b86a-1a73aef0588a.root', # big one
         'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/5aaef7fd-ab63-497c-ac23-ca1f98d99ab8.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/420/00000/86cc8673-48be-4a38-a7aa-311d43dbb3e7.root',
 #        'root://cms-xrd-global.cern.ch///store/data/Run2024C/ScoutingPFMonitor/MINIAOD/PromptReco-v1/000/379/433/00000/e6522372-1987-42c7-8495-c77605c8081d.root',
@@ -52,8 +63,11 @@ process.source = cms.Source("PoolSource",
     )
 )
 
+process.load("EventFilter.L1TRawToDigi.gtStage2Digis_cfi")
+process.gtStage2Digis.InputLabel = cms.InputTag( "hltFEDSelectorL1" )
 
 process.DQMStore = cms.Service("DQMStore")
+
 
 process.load("DQMServices.FileIO.DQMFileSaverOnline_cfi")
 process.DQMoutput = cms.OutputModule("DQMRootOutputModule",
@@ -61,7 +75,10 @@ process.DQMoutput = cms.OutputModule("DQMRootOutputModule",
 
 #process.load("DQMServices.FileIO.DQMFileSaverPB_cfi")
 process.dqmSaver.tag = 'SCOUTING'
+process.dqmSaver.runNumber = 333334
 process.load("HLTriggerOffline.Scouting.HLTScoutingEGammaDqmOffline_cff")
+
+process.options = cms.untracked.PSet(numberOfThreads = cms.untracked.uint32(1))
 
 process.p = cms.Path(process.hltScoutingEGammaDqmOffline + process.dqmSaver)
 process.DQMoutput_step = cms.EndPath(process.DQMoutput)
