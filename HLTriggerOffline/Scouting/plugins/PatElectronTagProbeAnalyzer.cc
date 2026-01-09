@@ -31,6 +31,18 @@
 //  Class declaration  //
 /////////////////////////
 
+struct kTriggerSet {
+  std::string pathName;
+  std::vector<std::string> filters;
+};
+
+struct kTriggerSetResult {
+  std::string pathName;
+  std::vector<std::string> filters;
+  bool passTrigger;
+  std::map<std::string, trigger::TriggerObjectCollection> filterObjects;
+}
+
 struct kProbeFilterHistos {
   dqm::reco::MonitorElement* hPt_Barrel_passBaseDST;
   dqm::reco::MonitorElement* hPt_Endcap_passBaseDST;
@@ -155,10 +167,11 @@ private:
   const std::string outputInternalPath_;
 
   const std::vector<std::string> vBaseTriggerSelection_;
-  const std::vector<std::string> vtriggerSelection_;
-  const std::vector<std::string> filterToMatch_;
+  const std::vector<edm::ParameterSet> vtriggerConfig_;
   const std::vector<std::string> l1filterToMatch_;
   const std::vector<unsigned int> l1filterIndex_;
+
+  std::vector<kTriggerSet> vtriggerSet_;
 
   edm::EDGetToken algToken_;
   std::shared_ptr<l1t::L1TGlobalUtil> l1GtUtils_;
@@ -176,8 +189,7 @@ using namespace ROOT;
 PatElectronTagProbeAnalyzer::PatElectronTagProbeAnalyzer(const edm::ParameterSet& iConfig)
     : outputInternalPath_(iConfig.getParameter<std::string>("OutputInternalPath")),
       vBaseTriggerSelection_{iConfig.getParameter<std::vector<std::string>>("BaseTriggerSelection")},
-      vtriggerSelection_{iConfig.getParameter<std::vector<std::string>>("triggerSelection")},
-      filterToMatch_{iConfig.getParameter<std::vector<std::string>>("finalfilterSelection")},
+      vtriggerConfig_{iConfig.getParameter<std::vector<edm::ParameterSet>>("triggerConfigs")},
       l1filterToMatch_{iConfig.getParameter<std::vector<std::string>>("l1filterSelection")},
       l1filterIndex_{iConfig.getParameter<std::vector<unsigned int>>("l1filterSelectionIndex")},
       algToken_{consumes<BXVector<GlobalAlgBlk>>(iConfig.getParameter<edm::InputTag>("AlgInputTag"))},
@@ -191,6 +203,9 @@ PatElectronTagProbeAnalyzer::PatElectronTagProbeAnalyzer(const edm::ParameterSet
       eleIdMapTightToken_(consumes<edm::ValueMap<bool>>(iConfig.getParameter<edm::InputTag>("eleIdMapTight"))) {
   l1GtUtils_ = std::make_shared<l1t::L1TGlobalUtil>(iConfig, consumesCollector(), l1t::UseEventSetupIn::RunAndEvent);
   l1Seeds_ = iConfig.getParameter<std::vector<std::string>>("L1Seeds");
+  for (const auto& pset : vtriggerConfig_) {
+    vtriggerSet_.push_back({pset.getParameter<std::string>("pathName"), pset.getParameter<std::vector<std::string>>("filters")});
+  }
 }
 
 void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
@@ -232,16 +247,25 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
     edm::LogWarning("ScoutingEGammaCollectionMonitoring") << "Trgger Results not found.";
     return;
   }
+
   int nTriggers = triggerResults->size();
-  std::vector<bool> vtrigger_result(vtriggerSelection_.size(), false);
-  bool passBaseDST = false;
   const edm::TriggerNames& triggerNames = iEvent.triggerNames(*triggerResults);
+
+  std::vector<kTriggerSetResult> vtriggerSetResults;
+  vtriggerSetResults.reserve(vtriggerSet_.size());
+  for(const auto& config : vtriggerSet_) {
+    vtriggerSetResults.push_back({config.pathName, config.filters, false, {}});
+  }
+
+  bool passBaseDST = false;
   for (int i_Trig = 0; i_Trig < nTriggers; i_Trig++) {
     if (triggerResults.product()->accept(i_Trig)) {
       TString TrigPath = triggerNames.triggerName(i_Trig);
-      for (unsigned int i_selectTrig = 0; i_selectTrig < vtriggerSelection_.size(); i_selectTrig++) {
-        if (TrigPath.Index(vtriggerSelection_.at(i_selectTrig)) >= 0) {
-          vtrigger_result[i_selectTrig] = true;
+      for (auto& result : vtriggerSetResults) {
+        if (!result.passTrigger) {
+           if (TrigPath.Index(result.pathName) >= 0) {
+             result.passTrigger = true;
+           }
         }
       }
 
@@ -254,17 +278,16 @@ void PatElectronTagProbeAnalyzer::dqmAnalyze(edm::Event const& iEvent,
   }
 
   // Trigger Object Matching
-  size_t numberOfFilters = filterToMatch_.size();
-  trigger::TriggerObjectCollection* legObjects = new trigger::TriggerObjectCollection[numberOfFilters];
-  for (size_t iteFilter = 0; iteFilter < filterToMatch_.size(); iteFilter++) {
-    std::string filterTag = filterToMatch_.at(iteFilter);
-    for (pat::TriggerObjectStandAlone obj : *triggerObjects) {
+  for (pat::TriggerObjectStandAlone obj : *triggerObjects) {
       obj.unpackNamesAndLabels(iEvent, *triggerResults);
-      if (obj.hasFilterLabel(filterTag)) {
-        legObjects[iteFilter].push_back(obj);
+      for (auto& result : triggerSetResults) {
+          for (const auto& filterName : result.filters) {
+              if (obj.hasFilterLabel(filterName)) {
+                  result.filterObjects[filterName].push_back(obj);
+              }
       }
-    }
   }
+  
 
   // L1 Object Matching
   size_t numberOfl1Filters = l1filterToMatch_.size();
@@ -669,8 +692,7 @@ void PatElectronTagProbeAnalyzer::fillHistograms_resonance(const kProbeKinematic
 void PatElectronTagProbeAnalyzer::fillHistograms_resonance_sct(const kProbeKinematicHistos& histos,
                                                                const Run3ScoutingElectron& el,
                                                                const int gsfTrackIndex,
-                                                               const std::vector<bool> trigger_result,
-                                                               const trigger::TriggerObjectCollection* legObjects,
+                                                               const std::vector<kTriggerSetResult>>,
                                                                const trigger::TriggerObjectCollection* l1_legObjects,
                                                                const std::vector<bool> l1_result,
                                                                const bool pass_baseDST,
@@ -979,63 +1001,70 @@ void PatElectronTagProbeAnalyzer::bookHistograms_resonance(DQMStore::IBooker& ib
   histos.subleading_electron.hEta_passBaseDST =
       ibook.book1D(name + "_subleading_Eta_passBaseDST", name + "_subleading_Eta_passBaseDST", 20, -5.0, 5.0);
 
-  for (auto const& vt : vtriggerSelection_) {
-    std::string cleaned_vt = vt;
-    cleaned_vt.erase(std::remove(cleaned_vt.begin(), cleaned_vt.end(), '*'), cleaned_vt.end());
 
-    // Leading Electron
-    histos.leading_electron.hPt_Barrel_passDST.push_back(ibook.book1D(
-        name + "_leading_Pt_Barrel_pass" + cleaned_vt, name + "_leading_Pt_Barrel_pass" + cleaned_vt, 40, 0, 200));
-    histos.leading_electron.hPt_Endcap_passDST.push_back(ibook.book1D(
-        name + "_leading_Pt_Endcap_pass" + cleaned_vt, name + "_leading_Pt_Endcap_pass" + cleaned_vt, 40, 0, 200));
-    histos.leading_electron.hEta_passDST.push_back(
-        ibook.book1D(name + "_leading_Eta_pass" + cleaned_vt, name + "_leading_Eta_pass" + cleaned_vt, 20, -5.0, 5.0));
+  for (const auto& config : vtriggerSet_) {
+      std::string cleaned_vt = config.pathName;
+      cleaned_vt.erase(std::remove(cleaned_vt.begin(), cleaned_vt.end(), '*'), cleaned_vt.end());
 
-    histos.leading_electron.hPt_Barrel_fireTrigObj.push_back(
-        ibook.book1D(name + "_leading_Pt_Barrel_pass" + cleaned_vt + "_fireTrigObj",
-                     name + "_leading_Pt_Barrel_pass" + cleaned_vt + "_fireTrigObj",
-                     40,
-                     0,
-                     200));
-    histos.leading_electron.hPt_Endcap_fireTrigObj.push_back(
-        ibook.book1D(name + "_leading_Pt_Endcap_pass" + cleaned_vt + "_fireTrigObj",
-                     name + "_leading_Pt_Endcap_pass" + cleaned_vt + "_fireTrigObj",
-                     40,
-                     0,
-                     200));
-    histos.leading_electron.hEta_fireTrigObj.push_back(
-        ibook.book1D(name + "_leading_Eta_pass" + cleaned_vt + "_fireTrigObj",
-                     name + "_leading_Eta_pass" + cleaned_vt + "_fireTrigObj",
-                     20,
-                     -5.0,
-                     5.0));
+      // =======================================================
+      // Pass DST
+      // =======================================================
+      // -- Leading Electron --
 
-    // SubLeading Electron
-    histos.subleading_electron.hPt_Barrel_passDST.push_back(ibook.book1D(
-        name + "_subleading_Pt_Barrel_pass" + cleaned_vt, name + "_subleading_Pt_Barrel_pass" + cleaned_vt, 40, 0, 200));
-    histos.subleading_electron.hPt_Endcap_passDST.push_back(ibook.book1D(
-        name + "_subleading_Pt_Endcap_pass" + cleaned_vt, name + "_subleading_Pt_Endcap_pass" + cleaned_vt, 40, 0, 200));
-    histos.subleading_electron.hEta_passDST.push_back(ibook.book1D(
-        name + "_subleading_Eta_pass" + cleaned_vt, name + "_subleading_Eta_pass" + cleaned_vt, 20, -5.0, 5.0));
+      histos.leading_electron.hPt_Barrel_passDST.push_back(ibook.book1D(
+            name + "_leading_Pt_Barrel_pass" + cleaned_vt,
+            name + "_leading_Pt_Barrel_pass" + cleaned_vt, 40, 0, 200));
+      histos.leading_electron.hPt_Endcap_passDST.push_back(ibook.book1D(
+            name + "_leading_Pt_Endcap_pass" + cleaned_vt,
+            name + "_leading_Pt_Endcap_pass" + cleaned_vt, 40, 0, 200));
+      histos.leading_electron.hEta_passDST.push_back(ibook.book1D(
+            name + "_leading_Eta_pass" + cleaned_vt,
+            name + "_leading_Eta_pass" + cleaned_vt, 20, -5.0, 5.0));
 
-    histos.subleading_electron.hPt_Barrel_fireTrigObj.push_back(
-        ibook.book1D(name + "_subleading_Pt_Barrel_pass" + cleaned_vt + "_fireTrigObj",
-                     name + "_subleading_Pt_Barrel_pass" + cleaned_vt + "_fireTrigObj",
-                     40,
-                     0,
-                     200));
-    histos.subleading_electron.hPt_Endcap_fireTrigObj.push_back(
-        ibook.book1D(name + "_subleading_Pt_Endcap_pass" + cleaned_vt + "_fireTrigObj",
-                     name + "_subleading_Pt_Endcap_pass" + cleaned_vt + "_fireTrigObj",
-                     40,
-                     0,
-                     200));
-    histos.subleading_electron.hEta_fireTrigObj.push_back(
-        ibook.book1D(name + "_subleading_Eta_pass" + cleaned_vt + "_fireTrigObj",
-                     name + "_subleading_Eta_pass" + cleaned_vt + "_fireTrigObj",
-                     20,
-                     -5.0,
-                     5.0));
+      // -- SubLeading Electron --
+      histos.subleading_electron.hPt_Barrel_passDST.push_back(ibook.book1D(
+            name + "_subleading_Pt_Barrel_pass" + cleaned_path, 
+            name + "_subleading_Pt_Barrel_pass" + cleaned_path, 40, 0, 200));
+      histos.subleading_electron.hPt_Endcap_passDST.push_back(ibook.book1D(
+            name + "_subleading_Pt_Endcap_pass" + cleaned_path, 
+            name + "_subleading_Pt_Endcap_pass" + cleaned_path, 40, 0, 200));
+      histos.subleading_electron.hEta_passDST.push_back(ibook.book1D(
+            name + "_subleading_Eta_pass" + cleaned_path, 
+            name + "_subleading_Eta_pass" + cleaned_path, 20, -5.0, 5.0));
+
+      // -----------------------------------------------------
+      // B. Book Fire TrigObj Histograms (Per Filter)
+      // -----------------------------------------------------
+      // These vectors will grow larger than the passDST vectors!
+      for (const auto& filterName : config.filters) {
+
+        // Create a unique name: Path + Filter
+        std::string suffix = cleaned_path + "_" + filterName;
+
+        // Leading
+        histos.leading_electron.hPt_Barrel_fireTrigObj.push_back(ibook.book1D(
+            name + "_leading_Pt_Barrel_pass" + suffix,
+            name + "_leading_Pt_Barrel_pass" + suffix, 40, 0, 200));
+        histos.leading_electron.hPt_Endcap_fireTrigObj.push_back(ibook.book1D(
+            name + "_leading_Pt_Endcap_pass" + suffix,
+            name + "_leading_Pt_Endcap_pass" + suffix, 40, 0, 200));
+        histos.leading_electron.hEta_fireTrigObj.push_back(ibook.book1D(
+            name + "_leading_Eta_pass" + suffix,
+            name + "_leading_Eta_pass" + suffix, 20, -5.0, 5.0));
+
+        // SubLeading
+        histos.subleading_electron.hPt_Barrel_fireTrigObj.push_back(ibook.book1D(
+            name + "_subleading_Pt_Barrel_pass" + suffix,
+            name + "_subleading_Pt_Barrel_pass" + suffix, 40, 0, 200));
+        histos.subleading_electron.hPt_Endcap_fireTrigObj.push_back(ibook.book1D(
+            name + "_subleading_Pt_Endcap_pass" + suffix,
+            name + "_subleading_Pt_Endcap_pass" + suffix, 40, 0, 200));
+        histos.subleading_electron.hEta_fireTrigObj.push_back(ibook.book1D(
+            name + "_subleading_Eta_pass" + suffix,
+            name + "_subleading_Eta_pass" + suffix, 20, -5.0, 5.0));
+    }
+
+
   }
 
   for (auto const& l1seed : l1Seeds_) {
@@ -1061,10 +1090,12 @@ void PatElectronTagProbeAnalyzer::bookHistograms_resonance(DQMStore::IBooker& ib
 
 void PatElectronTagProbeAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
   edm::ParameterSetDescription desc;
+  edm::ParameterSetDescription triggerConfigDesc;
+  triggerConfigDesc.add<std::string>("pathName", "");
+  triggerConfigDesc.add<std::vector<std::string>>("filters", {});
   desc.add<std::string>("OutputInternalPath", "MY_FOLDER");
   desc.add<std::vector<std::string>>("BaseTriggerSelection", {});
-  desc.add<std::vector<std::string>>("triggerSelection", {});
-  desc.add<std::vector<std::string>>("finalfilterSelection", {});
+  desc.addVPSet("triggerConfigs", triggerConfigDesc, {});
   desc.add<std::vector<std::string>>("l1filterSelection", {});
   desc.add<std::vector<unsigned int>>("l1filterSelectionIndex", {});
   desc.add<edm::InputTag>("AlgInputTag", edm::InputTag("gtStage2Digis"));
